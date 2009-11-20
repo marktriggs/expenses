@@ -1,0 +1,102 @@
+For someone who studied accounting, I've never really paid a huge amount
+of attention to where my money goes when I stop looking. Generally
+speaking, as long as I've got somewhere to live and a steady supply of
+cheese and wine I'm not too worried.
+
+So it's funny that I suddenly decided that it would be a good idea to
+track my expenses, but there you have it. I thought I'd write a little
+Clojure program that would let me enter my recurring and one-off
+expenses (in a format reminiscent of Emacs's ~/.diary file) and have it
+tell me where all my money got to each week.
+
+You can see my source code or download the self-contained jar file to
+try for yourself.
+
+To use it, I create a file called ~/.expenses that looks roughly like
+this:
+
+  ## Recurring stuff...
+  #
+
+  # Amounts we receive are entered as negative numbers...
+  fortnightly     -10000  Fortnightly pay (I wish)
+  weekly          345.5   Rent (also optimistic)
+  monthly         123     Internet+phone
+
+  # Recurring items can have ranges attached to let you reflect changes
+  # in amounts over time, etc.
+  [--1/3/2009]    monthly         123  Health cover
+  [1/3/2009--]    monthly         234  Health cover (the bastards!)
+
+  fortnightly     50      Petrol
+  yearly          2345    Gas & Electricity
+  yearly          700     Car registration
+
+  # etc...
+
+  # One-off expenditures
+  #
+  25/02/2009      11.00   Coffee
+  25/02/2009      9.50    Lunch
+  25/02/2009      25.00   Wine
+  26/02/2009      25.00   Wine
+  27/02/2009      25.00   Wine
+  # ... more wine...
+
+Then I point the expenses program at this file to see the report over
+time:
+
+$ java -jar expenses.jar ~/.expenses
+
+
+  ======================================================
+  Week starting: Sun Feb 22 00:00:00 EST 2009
+  ======================================================
+
+    Recurring items:
+
+      22/02/2009          Fortnightly pay (I wish)                 5000.00
+      22/02/2009          Rent (also optimistic)                  ( 345.50)
+      22/02/2009          Internet+phone                          (  30.75)
+      22/02/2009          Health cover                            (  30.75)
+      22/02/2009          Petrol                                  (  25.00)
+      22/02/2009          Gas & Electricity                       (  45.10)
+      22/02/2009          Car registration                        (  13.46)
+
+      Subtotal:                                                     4509.44
+
+    Line items:
+
+      25/02/2009          Coffee                                  (  11.00)
+      25/02/2009          Lunch                                   (   9.50)
+      25/02/2009          Wine                                    (  25.00)
+      26/02/2009          Wine                                    (  25.00)
+      27/02/2009          Wine                                    (  25.00)
+
+      Subtotal:                                                   (  95.50)
+
+    =========================
+     Total saved: 4413.94
+    =========================
+
+Hooray! I'm fictitiously rich!
+
+And that's basically all it does: it apportions recurring expenses over
+each week so you can get a more realistic idea of what they cost you
+week-to-week, and makes it easy to record one-off items too. For
+recording those one-offs I use a snippet of Emacs lisp which I bind to a
+key:
+
+  (defun spend ()
+    (interactive)
+    (let ((now (time-stamp-dd/mm/yyyy))
+          (amount (read-number "Amount: "))
+          (description (read-string "Description?: ")))
+      (with-current-buffer (find-file-noselect "~/.expenses")
+        (goto-char (point-max))
+        (insert (format "%s\t%.2f\t%s\n"
+                        now
+                        amount
+                        description))
+        (save-buffer)
+        (kill-buffer))))
