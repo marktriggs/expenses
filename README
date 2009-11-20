@@ -9,8 +9,13 @@ Clojure program that would let me enter my recurring and one-off
 expenses (in a format reminiscent of Emacs's ~/.diary file) and have it
 tell me where all my money got to each week.
 
-You can see my source code or download the self-contained jar file to
-try for yourself.
+To compile it:
+
+  1.  Get Leiningen from http://github.com/technomancy/leiningen and put
+      the 'lein' script somewhere in your $PATH.
+
+  2.  Run `lein uberjar'.  Lein will grab all required dependencies and
+      produce a `expenses.jar'.
 
 To use it, I create a file called ~/.expenses that looks roughly like
 this:
