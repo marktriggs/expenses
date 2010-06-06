@@ -16,18 +16,18 @@
 
 (ns expenses
   (:import (java.util Calendar Date)
-	   (java.text SimpleDateFormat)
-	   (java.io File))
+           (java.text SimpleDateFormat)
+           (java.io File))
   (:use clojure.contrib.duck-streams
-	clojure.contrib.str-utils)
+        clojure.contrib.str-utils)
   (:gen-class :name Expenses
-	      :main true))
+              :main true))
 
 
 (def *time-periods* {"weekly" 1
-		     "fortnightly" 2
-		     "monthly" 4
-		     "yearly" 52})
+                     "fortnightly" 2
+                     "monthly" 4
+                     "yearly" 52})
 
 
 (defn date-formatter []
@@ -45,9 +45,9 @@
 (defn parse-applicability [s]
   "Parse a date range indicating when an entry is applicable."
   (let [date-parser (date-formatter)
-	[_ start _ end]
-	(first (re-seq #"\[([0-9]+/[0-9]+/[0-9]+)?(--)?([0-9]+/[0-9]+/[0-9]+)?\]"
-		       s))]
+        [_ start _ end]
+        (first (re-seq #"\[([0-9]+/[0-9]+/[0-9]+)?(--)?([0-9]+/[0-9]+/[0-9]+)?\]"
+                       s))]
     [(when start
        (. date-parser (parse start)))
      (when end
@@ -57,15 +57,15 @@
 (defn parse-line [str]
   "Parse a line from our ~/.expenses file."
   (let [date-parser (date-formatter)
-	[applicability date amount desc] (tokenise str)
-	[from to] (if applicability
-		    (parse-applicability applicability)
-		    [nil nil])]
+        [applicability date amount desc] (tokenise str)
+        [from to] (if applicability
+                    (parse-applicability applicability)
+                    [nil nil])]
     {:from from
      :to to
      :date (if ((set (keys *time-periods*)) date)
-	     date
-	     (. date-parser (parse date)))
+             date
+             (. date-parser (parse date)))
      :amount (. Float (valueOf amount))
      :description desc}))
 
@@ -78,10 +78,10 @@
 (defn normalise [entry]
   "Break a recurring expenditure down to its per-week amount."
   (dissoc (update-in entry
-		     [:amount]
-		     #(/ %
-			 (*time-periods* (:date entry))))
-	  :date))
+                     [:amount]
+                     #(/ %
+                         (*time-periods* (:date entry))))
+          :date))
 
 
 (defn sort-expenses [expenses]
@@ -92,29 +92,29 @@
 (defn parse-expenses [stream]
   "Parse the expenses file and return a summary."
   (let [result (reduce (fn [result line]
-			 (if (or (re-matches #"^[ \t]*$" line)
-				 (re-matches #"^#.*$" line))
-			   result
-			   (let [entry (parse-line line)]
-			     (if (instance? Date (:date entry))
-			       (record entry :expenses result)
-			       (record (normalise entry) :weekly-expenses result)))))
-		       {:weekly-expenses []
-			:expenses []}
-		       (line-seq stream))]
+                         (if (or (re-matches #"^[ \t]*$" line)
+                                 (re-matches #"^#.*$" line))
+                           result
+                           (let [entry (parse-line line)]
+                             (if (instance? Date (:date entry))
+                               (record entry :expenses result)
+                               (record (normalise entry) :weekly-expenses result)))))
+                       {:weekly-expenses []
+                        :expenses []}
+                       (line-seq stream))]
     (update-in result [:expenses] sort-expenses)))
 
-	     
+
 
 (defn week-of [date]
   "Find the beginning of the week containing `date'."
   (let [cal (doto (. Calendar getInstance)
-	      (.setTime date))]
+              (.setTime date))]
     (if (not= (. cal (get Calendar/DAY_OF_WEEK))
-	      (. cal getFirstDayOfWeek))
+              (. cal getFirstDayOfWeek))
       (recur (. (doto cal
-		  (. add Calendar/DAY_OF_WEEK -1))
-		getTime))
+                  (. add Calendar/DAY_OF_WEEK -1))
+                getTime))
       date)))
 
 
@@ -122,16 +122,16 @@
   "Enumerate the weeks between two dates.
 For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
   (let [cal (doto (. Calendar getInstance)
-	      (.setTime start))]
+              (.setTime start))]
     (take-while #(<= (. % (compareTo end)) 0)
-		(map #(. % getTime)
-		     (iterate (fn [c]
-				(. c (add Calendar/WEEK_OF_YEAR 1))
-				(. c clone))
-			      cal)))))
+                (map #(. % getTime)
+                     (iterate (fn [c]
+                                (. c (add Calendar/WEEK_OF_YEAR 1))
+                                (. c clone))
+                              cal)))))
 
 
-(defn line 
+(defn line
   "Return an ugly ASCII line."
   ([] (line 100))
   ([n] (apply str (replicate n "="))))
@@ -145,7 +145,7 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
 (defn format-amount [amount]
   "Pretty-print a dollar amount."
   (format (if (>= amount 0) "(%7.2f)" "%7.2f")
-	  (float (Math/abs amount))))
+          (float (Math/abs amount))))
 
 
 (defn show-week [week-summary]
@@ -156,33 +156,33 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
   (println "  Recurring items:\n")
 
   (doseq [entry (:weekly-entries week-summary)]
-    (println (format "    %s\t\t%-30s\t\t%8s" 
-		     (. (date-formatter) (format (:start-date week-summary)))
-		     (:description entry)
-		     (format-amount (:amount entry)))))
+    (println (format "    %s\t\t%-30s\t\t%8s"
+                     (. (date-formatter) (format (:start-date week-summary)))
+                     (:description entry)
+                     (format-amount (:amount entry)))))
 
-  (println (format "\n    Subtotal: %59s" 
-		   (format-amount (entry-amounts (:weekly-entries week-summary)))))
+  (println (format "\n    Subtotal: %59s"
+                   (format-amount (entry-amounts (:weekly-entries week-summary)))))
 
   (println "")
   (println "  Line items:\n")
 
   (doseq [entry (:entries week-summary)]
-    (println (format "    %s\t\t%-30s\t\t%8s" 
-		     (. (date-formatter) (format (:date entry)))
-		     (:description entry)
-		     (format-amount (:amount entry)))))
+    (println (format "    %s\t\t%-30s\t\t%8s"
+                     (. (date-formatter) (format (:date entry)))
+                     (:description entry)
+                     (format-amount (:amount entry)))))
 
-  (println (format "\n    Subtotal: %59s" 
-		   (format-amount (entry-amounts (:entries week-summary)))))
+  (println (format "\n    Subtotal: %59s"
+                   (format-amount (entry-amounts (:entries week-summary)))))
   (println "")
 
   (println (str "  " (line 25)))
   (println (format "   Total saved: %s"
-		   (format-amount
-		    (entry-amounts
-		     (lazy-cat (:weekly-entries week-summary)
-			       (:entries week-summary))))))
+                   (format-amount
+                    (entry-amounts
+                     (lazy-cat (:weekly-entries week-summary)
+                               (:entries week-summary))))))
   (println (str "  " (line 25))))
 
 
@@ -191,12 +191,12 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
   {:start-date week
    :entries (filter #(= week (week-of (:date %))) (:expenses summary))
    :weekly-entries (filter #(and (or (not (:from %))
-				     (>= (. week (compareTo (week-of (:from %))))
-					 0))
-				 (or (not (:to %))
-				     (< (. week (compareTo (week-of (:to %))))
-					0)))
-			   (:weekly-expenses summary))})
+                                     (>= (. week (compareTo (week-of (:from %))))
+                                         0))
+                                 (or (not (:to %))
+                                     (< (. week (compareTo (week-of (:to %))))
+                                        0)))
+                           (:weekly-expenses summary))})
 
 
 
@@ -204,26 +204,26 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
   "Print a report based on `summary'"
   (when (not (empty?  (:expenses summary)))
     (let [start-week (week-of (:date (first (:expenses summary))))
-	  end-week (week-of (:date (last (:expenses summary))))
-	  weeks (map #(tally-week % summary) (week-range start-week end-week))
-	  savings (reduce (fn [total week-summary]
-			    (+ total
-			       (entry-amounts (:entries week-summary))
-			       (entry-amounts (:weekly-entries week-summary))))
-			  0
-			  weeks)]
+          end-week (week-of (:date (last (:expenses summary))))
+          weeks (map #(tally-week % summary) (week-range start-week end-week))
+          savings (reduce (fn [total week-summary]
+                            (+ total
+                               (entry-amounts (:entries week-summary))
+                               (entry-amounts (:weekly-entries week-summary))))
+                          0
+                          weeks)]
       (doseq [week-summary weeks]
-	(show-week week-summary))
+        (show-week week-summary))
 
       (println)
       (println (line 25))
-      (println (format " Total savings (%s to %s):\t\t\t%s" 
-		       (. (date-formatter) (format start-week))
-		       (. (date-formatter) (format end-week))
-		       (format-amount savings)))
-      (println (format "\n Average saved per week:\t\t\t\t\t%s" 
-		       (format-amount (/ savings
-					 (count weeks)))))
+      (println (format " Total savings (%s to %s):\t\t\t%s"
+                       (. (date-formatter) (format start-week))
+                       (. (date-formatter) (format end-week))
+                       (format-amount savings)))
+      (println (format "\n Average saved per week:\t\t\t\t\t%s"
+                       (format-amount (/ savings
+                                         (count weeks)))))
       (println (line 25)))))
 
 
@@ -233,8 +233,8 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
     (. System/err (println "Usage: java -jar expenses.jar <expenses file>"))
     (. System (exit 0)))
   (let [file (try (reader (first args))
-		  (catch Exception e
-		    (. System/err (println (str "Failed to open "
-						(first args))))
-		    (. System (exit 1))))]
+                  (catch Exception e
+                    (. System/err (println (str "Failed to open "
+                                                (first args))))
+                    (. System (exit 1))))]
     (generate-report (parse-expenses file))))
