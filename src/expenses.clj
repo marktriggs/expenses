@@ -81,6 +81,9 @@
 (defn set-param [param value summary]
   (assoc-in summary [:params param] value))
 
+(defn get-param [param summary]
+  (get-in summary [:params param]))
+
 
 (defn normalise [entry]
   "Break a recurring expenditure down to its per-week amount."
@@ -269,8 +272,7 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
                                                 (first args))))
                     (. System (exit 1))))]
     (let [expenses (parse-expenses file)]
-      (binding [*start-of-week* (if-let [start (get-in expenses
-                                                       [:params "week_start"])]
+      (binding [*start-of-week* (if-let [start (get-param "week_start" expenses)]
                                   (day-to-int start)
                                   *start-of-week*)]
         (generate-report expenses)))))

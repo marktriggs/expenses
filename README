@@ -23,6 +23,10 @@ this:
   ## Recurring stuff...
   #
 
+  # This is the default anyway, but you can set the reported week to
+  # start whenever you like.
+  #set week_start Sunday
+
   # Amounts we receive are entered as negative numbers...
   fortnightly     -10000  Fortnightly pay (I wish)
   weekly          345.5   Rent (also optimistic)
@@ -42,7 +46,7 @@ this:
   # One-off expenditures
   #
   25/02/2009      11.00   Coffee
-  25/02/2009      9.50    Lunch
+  25/02/2009      9.50    Lunch      (some extra (ignored) notes here)
   25/02/2009      25.00   Wine
   26/02/2009      25.00   Wine
   27/02/2009      25.00   Wine
