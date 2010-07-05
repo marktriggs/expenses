@@ -38,8 +38,8 @@
   "Split an input line into its parts."
   (let [s (. s trim)]
     (if (re-matches #"^\[.*" s)
-      (map #(.trim %) (. s split "(\t+|  +)"))
-      (concat [nil] (map #(.trim %) (. s (split "(\t+|  +)")))))))
+      (map #(.trim %) (. s split "([\t ]{2,}|\t+)"))
+      (concat [nil] (map #(.trim %) (. s (split "([\t ]{2,}|\t+)")))))))
 
 
 (defn parse-applicability [s]
