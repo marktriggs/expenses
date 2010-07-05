@@ -29,6 +29,8 @@
                      "monthly" 4
                      "yearly" 52})
 
+(def *start-of-week* (.. Calendar getInstance getFirstDayOfWeek))
+
 
 (defn date-formatter []
   (SimpleDateFormat. "dd/MM/yyyy"))
@@ -46,7 +48,8 @@
   "Parse a date range indicating when an entry is applicable."
   (let [date-parser (date-formatter)
         [_ start _ end]
-        (first (re-seq #"\[([0-9]+/[0-9]+/[0-9]+)?(--)?([0-9]+/[0-9]+/[0-9]+)?\]"
+        (first (re-seq
+                #"\[([0-9]+/[0-9]+/[0-9]+)?(--)?([0-9]+/[0-9]+/[0-9]+)?\]"
                        s))]
     [(when start
        (. date-parser (parse start)))
@@ -75,6 +78,10 @@
   (update-in summary [type] conj entry))
 
 
+(defn set-param [param value summary]
+  (assoc-in summary [:params param] value))
+
+
 (defn normalise [entry]
   "Break a recurring expenditure down to its per-week amount."
   (dissoc (update-in entry
@@ -89,18 +96,37 @@
   (sort-by :date expenses))
 
 
+(def *parse-rules* [{:name "Set directive"
+                     :matches #"^#set .*$"
+                     :handler (fn [result line]
+                                (let [[[_ param val]]
+                                      (re-seq #"^#set (.+?) (.+?)$"
+                                              line)]
+                                  (set-param param val result)))}
+
+                    {:name "Comment or blank"
+                     :matches #"(^#.*$|^[ \t]*$)"
+                     :handler (fn [result line] result)}
+
+                    {:name "Default"
+                     :matches #".*"
+                     :handler (fn [result line]
+                                (let [entry (parse-line line)]
+                                  (if (instance? Date (:date entry))
+                                    (record entry :expenses result)
+                                    (record (normalise entry)
+                                            :weekly-expenses result))))}])
+
 (defn parse-expenses [stream]
   "Parse the expenses file and return a summary."
   (let [result (reduce (fn [result line]
-                         (if (or (re-matches #"^[ \t]*$" line)
-                                 (re-matches #"^#.*$" line))
-                           result
-                           (let [entry (parse-line line)]
-                             (if (instance? Date (:date entry))
-                               (record entry :expenses result)
-                               (record (normalise entry) :weekly-expenses result)))))
+                         ((:handler (some #(and (re-matches (:matches %) line)
+                                               %)
+                                          *parse-rules*))
+                          result line))
                        {:weekly-expenses []
-                        :expenses []}
+                        :expenses []
+                        :params {}}
                        (line-seq stream))]
     (update-in result [:expenses] sort-expenses)))
 
@@ -111,7 +137,7 @@
   (let [cal (doto (. Calendar getInstance)
               (.setTime date))]
     (if (not= (. cal (get Calendar/DAY_OF_WEEK))
-              (. cal getFirstDayOfWeek))
+              *start-of-week*)
       (recur (. (doto cal
                   (. add Calendar/DAY_OF_WEEK -1))
                 getTime))
@@ -228,6 +254,11 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
     (println (line 25))))
 
 
+(defn day-to-int [day]
+  (let [field (.getDeclaredField Calendar (.toUpperCase day))]
+    (.getInt field field)))
+
+
 (defn -main [& args]
   (when (not= (count args) 1)
     (. System/err (println "Usage: java -jar expenses.jar <expenses file>"))
@@ -237,4 +268,9 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
                     (. System/err (println (str "Failed to open "
                                                 (first args))))
                     (. System (exit 1))))]
-    (generate-report (parse-expenses file))))
+    (let [expenses (parse-expenses file)]
+      (binding [*start-of-week* (if-let [start (get-in expenses
+                                                       [:params "week_start"])]
+                                  (day-to-int start)
+                                  *start-of-week*)]
+        (generate-report expenses)))))
