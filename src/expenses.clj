@@ -167,7 +167,7 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
   (println "")
   (println "  Line items:\n")
 
-  (doseq [entry (sort-by :description (:entries week-summary))]
+  (doseq [entry (:entries week-summary)]
     (println (format "    %s\t\t%-30s\t\t%8s"
                      (. (date-formatter) (format (:date entry)))
                      (:description entry)
