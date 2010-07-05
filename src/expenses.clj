@@ -202,30 +202,30 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
 
 (defn generate-report [summary]
   "Print a report based on `summary'"
-  (when (not (empty?  (:expenses summary)))
-    (let [start-week (week-of (:date (first (:expenses summary))))
-          end-week (week-of (:date (last (:expenses summary))))
-          weeks (map #(tally-week % summary) (week-range start-week end-week))
-          savings (reduce (fn [total week-summary]
-                            (+ total
-                               (entry-amounts (:entries week-summary))
-                               (entry-amounts (:weekly-entries week-summary))))
-                          0
-                          weeks)]
-      (doseq [week-summary weeks]
-        (show-week week-summary))
+  (let [start-week (if-not (empty? (:expenses summary))
+                     (week-of (:date (first (:expenses summary))))
+                     (week-of (Date.)))
+        end-week (week-of (Date.))
+        weeks (map #(tally-week % summary) (week-range start-week end-week))
+        savings (reduce (fn [total week-summary]
+                          (+ total
+                             (entry-amounts (:entries week-summary))
+                             (entry-amounts (:weekly-entries week-summary))))
+                        0
+                        weeks)]
+    (doseq [week-summary weeks]
+      (show-week week-summary))
 
-      (println)
-      (println (line 25))
-      (println (format " Total savings (%s to %s):\t\t\t%s"
-                       (. (date-formatter) (format start-week))
-                       (. (date-formatter) (format end-week))
-                       (format-amount savings)))
-      (println (format "\n Average saved per week:\t\t\t\t\t%s"
-                       (format-amount (/ savings
-                                         (count weeks)))))
-      (println (line 25)))))
-
+    (println)
+    (println (line 25))
+    (println (format " Total savings (%s to %s):\t\t\t%s"
+                     (. (date-formatter) (format start-week))
+                     (. (date-formatter) (format end-week))
+                     (format-amount savings)))
+    (println (format "\n Average saved per week:\t\t\t\t\t%s"
+                     (format-amount (/ savings
+                                       (count weeks)))))
+    (println (line 25))))
 
 
 (defn -main [& args]
