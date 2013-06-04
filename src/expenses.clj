@@ -19,7 +19,8 @@
            (java.text SimpleDateFormat)
            (java.io File))
   (:use clojure.java.io)
-  (:require [clojure.string :as string])
+  (:require [clojure.string :as string]
+            [clojure.data.json :as json])
   (:gen-class))
 
 
@@ -29,7 +30,6 @@
                      "yearly" 52})
 
 (def ^:dynamic *start-of-week* (.. Calendar getInstance getFirstDayOfWeek))
-
 
 (defn date-formatter []
   (SimpleDateFormat. "dd/MM/yyyy"))
@@ -281,4 +281,17 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
       (binding [*start-of-week* (if-let [start (get-param "week_start" expenses)]
                                   (day-to-int start)
                                   *start-of-week*)]
-        (display-report (generate-report expenses))))))
+        (let [report (generate-report expenses)]
+         (if (System/getenv "JSON")
+           (do (json/write report *out*
+                           :value-fn (fn [k v]
+                                       (if (instance? Date v)
+                                         (.getTime v)
+                                         v)))
+               (.flush *out*))
+           (display-report report)))))))
+
+
+
+
+
