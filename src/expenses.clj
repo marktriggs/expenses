@@ -18,18 +18,17 @@
   (:import (java.util Calendar Date)
            (java.text SimpleDateFormat)
            (java.io File))
-  (:use clojure.contrib.duck-streams
-        clojure.contrib.str-utils)
-  (:gen-class :name Expenses
-              :main true))
+  (:use clojure.java.io)
+  (:require [clojure.string :as string])
+  (:gen-class))
 
 
-(def *time-periods* {"weekly" 1
+(def time-periods {"weekly" 1
                      "fortnightly" 2
                      "monthly" 4
                      "yearly" 52})
 
-(def *start-of-week* (.. Calendar getInstance getFirstDayOfWeek))
+(def ^:dynamic *start-of-week* (.. Calendar getInstance getFirstDayOfWeek))
 
 
 (defn date-formatter []
@@ -66,7 +65,7 @@
                     [nil nil])]
     {:from from
      :to to
-     :date (if ((set (keys *time-periods*)) date)
+     :date (if ((set (keys time-periods)) date)
              date
              (. date-parser (parse date)))
      :amount (. Float (valueOf amount))
@@ -90,7 +89,7 @@
   (dissoc (update-in entry
                      [:amount]
                      #(/ %
-                         (*time-periods* (:date entry))))
+                         (time-periods (:date entry))))
           :date))
 
 
