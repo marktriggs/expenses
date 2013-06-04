@@ -230,7 +230,6 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
 
 
 (defn generate-report [summary]
-  "Print a report based on `summary'"
   (let [start-week (if-not (empty? (:expenses summary))
                      (week-of (:date (first (:expenses summary))))
                      (week-of (Date.)))
@@ -242,19 +241,27 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
                              (entry-amounts (:weekly-entries week-summary))))
                         0
                         weeks)]
-    (doseq [week-summary weeks]
-      (show-week week-summary))
+    {:start-week start-week
+     :end-week end-week
+     :weeks weeks
+     :savings savings
+     :average-saved-per-week (/ savings (count weeks))}))
 
-    (println)
-    (println (line 25))
-    (println (format " Total savings (%s to %s):\t\t\t%s"
-                     (. (date-formatter) (format start-week))
-                     (. (date-formatter) (format end-week))
-                     (format-amount savings)))
-    (println (format "\n Average saved per week:\t\t\t\t\t%s"
-                     (format-amount (/ savings
-                                       (count weeks)))))
-    (println (line 25))))
+
+(defn display-report [report]
+  "Print a report in ASCII format"
+  (doseq [week-summary (:weeks report)]
+    (show-week week-summary))
+
+  (println)
+  (println (line 25))
+  (println (format " Total savings (%s to %s):\t\t\t%s"
+                   (. (date-formatter) (format (:start-week report)))
+                   (. (date-formatter) (format (:end-week report)))
+                   (format-amount (:savings report))))
+  (println (format "\n Average saved per week:\t\t\t\t\t%s"
+                   (format-amount (:average-saved-per-week report))))
+  (println (line 25)))
 
 
 (defn day-to-int [day]
@@ -275,4 +282,4 @@ For example.  (week-range 01/01/01 31/12/01) should yield 52 elements."
       (binding [*start-of-week* (if-let [start (get-param "week_start" expenses)]
                                   (day-to-int start)
                                   *start-of-week*)]
-        (generate-report expenses)))))
+        (display-report (generate-report expenses))))))
